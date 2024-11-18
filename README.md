@@ -2,4 +2,5 @@
 Vendor UI for Ignite Design Challenge
 
 Lance Kakkassery
-Kazuya Okada
+Daniel Nguyen
+Hello World
