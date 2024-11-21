@@ -2,7 +2,7 @@ from flask import Flask,jsonify,Response
 from flask_cors import CORS
 import pandas as pd
 import json
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 app = Flask(__name__)
 cors = CORS(app, origins='*')
@@ -14,9 +14,9 @@ df.to_sql('invent_data', engine, if_exists='replace', index=False)
 @app.route('/products', methods=['GET']) 
 def get_products(): 
     conn = engine.connect() 
-    query = 'SELECT * FROM invent_data'
+    query = text('SELECT * FROM invent_data')
     result = conn.execute(query) 
-    products = [dict(row) for row in result] 
+    products = [dict(row._mapping) for row in result] 
     conn.close()
     return jsonify(products)
 @app.route('/preliminary')
