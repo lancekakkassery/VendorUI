@@ -25,11 +25,6 @@ def read_file():
 # Access the data
 
 
-
-@app.route('/hello')
-def hello_world():
-    return "Hello, World!"
-
 #small 
 
 if __name__ == '__main__':
