@@ -19,6 +19,7 @@ def get_products():
     products = [dict(row) for row in result] 
     conn.close()
     return jsonify(products)
+@app.route('/preliminary')
 def read_file():
     # Open the JSON file
     with open('retail.json', 'r') as file:
