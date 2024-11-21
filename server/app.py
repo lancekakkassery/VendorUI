@@ -30,18 +30,6 @@ def read_file():
 def hello_world():
     return "Hello, World!"
 
-@app.route('/api/users', methods = ['GET'])
-def users():
-    return jsonify(
-        {
-            'users':[
-                'arpan',
-                'zach',
-                'jessie'
-            ]
-        }
-    )
-
 #small 
 
 if __name__ == '__main__':
