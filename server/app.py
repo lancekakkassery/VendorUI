@@ -1,4 +1,4 @@
-from flask import Flask,jsonify,Response
+from flask import Flask,jsonify,Response, request
 from flask_cors import CORS
 import pandas as pd
 import json
@@ -19,6 +19,24 @@ def get_products():
     products = [dict(row._mapping) for row in result] 
     conn.close()
     return jsonify(products)
+
+@app.route('/orders', methods=['POST'])
+def take_order():
+    order_data = request.json
+    product_id = order_data["product_id"] #need to decide how order information will be communicated
+    order_quantity = order_data["order_quantity"] #placeholders
+    with engine.connect() as conn:
+        result = conn.execute(text('SELECT onhand_quantity FROM retail_data WHERE product_id = :product_id'), {"product_id": product_id})
+        product = result.fetchone()
+        if product and product["onhand_quantity"] >= order_quantity:
+            conn.execute(text('UPDATE retail_data SET onhand_quantity = onhand_quantity - :order_quantity WHERE product_id = :product_id'), {"order_quantity": order_quantity, "product_id": product_id}) 
+            conn.execute(text('INSERT INTO orders (order_date_time, store_id, store_zip, product_id, order_quantity) VALUES (:order_date_time, :store_id, :store_zip, :product_id, :order_quantity)'), order_data) 
+            return jsonify({"message": "Order processed"})
+        else:
+            return jsonify({"error": "Insufficient inventory"}), 400 #400 status code for hwne server cannot or will not process a request due to client error
+        
+
+
 @app.route('/preliminary')
 def read_file():
     # Open the JSON file
