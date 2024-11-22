@@ -1,4 +1,4 @@
-from flask import Flask,jsonify,Response, request
+from flask import Flask,jsonify,Response,request
 from flask_cors import CORS
 import pandas as pd
 import json
@@ -9,7 +9,7 @@ cors = CORS(app, origins='*')
 engine = create_engine('sqlite:///vendor.db')
 
 create_table_statement = text('''
-CREATE TABLE sales (
+CREATE TABLE IF NOT EXISTS sales (
     sale_id INTEGER PRIMARY KEY AUTOINCREMENT, 
     order_date_time DATETIME, 
     store_id TEXT, 
@@ -27,10 +27,10 @@ df = pd.read_json('retail.json')
 df.to_sql('invent_data', engine, if_exists='replace', index=False)
 @app.route('/products', methods=['GET']) 
 def get_products(): 
-    conn = engine.connect() 
+    conn = engine.connect()
     query = text('SELECT * FROM invent_data')
-    result = conn.execute(query) 
-    products = [dict(row._mapping) for row in result] 
+    result = conn.execute(query)
+    products = [dict(row._mapping) for row in result]
     conn.close()
     return jsonify(products)
 
@@ -58,7 +58,7 @@ def take_order():
             return jsonify({"message": "Order processed"})
         else:
             return jsonify({"error": "Insufficient inventory"}), 400 #400 status code for hwne server cannot or will not process a request due to client error
-        
+
 
 @app.route('/preliminary')
 def read_file():
