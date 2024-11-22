@@ -12,7 +12,6 @@ create_table_statement = text('''
 CREATE TABLE IF NOT EXISTS sales (
     sale_id INTEGER PRIMARY KEY AUTOINCREMENT, 
     order_date_time DATETIME, 
-    store_id TEXT, 
     product_id TEXT, 
     quantity INTEGER, 
     price REAL,
@@ -33,7 +32,6 @@ def get_products():
     products = [dict(row._mapping) for row in result]
     conn.close()
     return jsonify(products)
-
 @app.route('/orders', methods=['POST'])
 def take_order():
     order_data = request.json
@@ -47,9 +45,8 @@ def take_order():
         if product and product["onhand_quantity"] >= order_quantity:
             conn.execute(text('UPDATE retail_data SET onhand_quantity = onhand_quantity - :order_quantity WHERE product_id = :product_id'), {"order_quantity": order_quantity, "product_id": product_id}) 
             total = order_quantity * product["unit_price"]
-            conn.execute(text('INSERT INTO sales (order_date_time, store_id, product_id, quantity, price, total) VALUES (:order_date_time, :store_id, :product_id, :quantity, :price, :total)'), {
+            conn.execute(text('INSERT INTO sales (order_date_time, product_id, quantity, price, total) VALUES (:order_date_time, :product_id, :quantity, :price, :total)'), {
                 "order_date_time": order_date_time,
-                "store_id": store_id,
                 "product_id": product_id,
                 "quantity": order_quantity,
                 "price": product["unit_price"],
