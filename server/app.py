@@ -22,8 +22,9 @@ CREATE TABLE IF NOT EXISTS sales (
 with engine.connect() as conn:
     conn.execute(create_table_statement)
 # Load the JSON file into a pandas DataFrame
-df = pd.read_json('retail.json') 
+df = pd.read_json('inventory.json') 
 df.to_sql('invent_data', engine, if_exists='replace', index=False)
+
 @app.route('/products', methods=['GET']) 
 def get_products(): 
     conn = engine.connect()
@@ -32,6 +33,7 @@ def get_products():
     products = [dict(row._mapping) for row in result]
     conn.close()
     return jsonify(products)
+
 @app.route('/orders', methods=['POST'])
 def take_order():
     order_data = request.json
@@ -55,8 +57,7 @@ def take_order():
             return jsonify({"message": "Order processed"})
         else:
             return jsonify({"error": "Insufficient inventory"}), 400 #400 status code for hwne server cannot or will not process a request due to client error
-
-
+        
 @app.route('/preliminary')
 def read_file():
     # Open the JSON file
