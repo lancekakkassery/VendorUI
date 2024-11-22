@@ -8,19 +8,40 @@ app = Flask(__name__)
 cors = CORS(app, origins='*')
 engine = create_engine('sqlite:///vendor.db')
 
-create_table_statement = text('''
-CREATE TABLE IF NOT EXISTS sales (
-    sale_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+create_orders = text('''
+CREATE TABLE IF NOT EXISTS orders (
+    order_id  INTEGER PRIMARY KEY AUTOINCREMENT, 
     order_date_time DATETIME, 
     product_id TEXT, 
-    quantity INTEGER, 
-    price REAL,
-    total REAL 
+    order_quantity INTEGER
 ) 
 ''')
 
+create_sales = text('''
+CREATE TABLE IF NOT EXISTS sales (
+    sale_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+    order_id  INTEGER,
+    sale_date_time DATETIME, 
+    product_id TEXT, 
+    quantity INTEGER, 
+    unit_price REAL,
+    total REAL,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+) 
+''')
+
+create_inventory = text('''
+CREATE TABLE IF NOT EXISTS inventory (
+    product_name TEXT PRIMARY KEY,
+    quantity INTEGER
+) 
+''')
+
+
 with engine.connect() as conn:
-    conn.execute(create_table_statement)
+    conn.execute(create_orders)
+    conn.execute(create_sales)
+    conn.execute(create_inventory)
 # Load the JSON file into a pandas DataFrame
 df = pd.read_json('inventory.json') 
 df.to_sql('invent_data', engine, if_exists='replace', index=False)
@@ -37,20 +58,26 @@ def get_products():
 @app.route('/orders', methods=['POST'])
 def take_order():
     order_data = request.json
-    product_id = order_data["product_id"] #need to decide how order information will be communicated
+    product_name = order_data["product_name"] #need to decide how order information will be communicated
     order_quantity = order_data["order_quantity"] #placeholders
-    store_id = order_data["store_id"]
     order_date_time = order_data["order_date_time"]
     with engine.connect() as conn:
-        result = conn.execute(text('SELECT onhand_quantity FROM retail_data WHERE product_id = :product_id'), {"product_id": product_id})
+        result = conn.execute(text('SELECT quantity FROM inventory WHERE product_name = :product_name'), {"product_name": product_name})
         product = result.fetchone()
-        if product and product["onhand_quantity"] >= order_quantity:
-            conn.execute(text('UPDATE retail_data SET onhand_quantity = onhand_quantity - :order_quantity WHERE product_id = :product_id'), {"order_quantity": order_quantity, "product_id": product_id}) 
-            total = order_quantity * product["unit_price"]
-            conn.execute(text('INSERT INTO sales (order_date_time, product_id, quantity, price, total) VALUES (:order_date_time, :product_id, :quantity, :price, :total)'), {
+        if product and product["quantity"] >= order_quantity:
+            conn.execute(text('UPDATE inventory SET quantity = quantity - :order_quantity WHERE product_name = :product_name'), {"order_quantity": order_quantity, "product_name": product_name}) 
+            conn.execute(text('INSERT INTO orders (order_date_time, product_name, quantity) VALUES (:order_date_time, :product_name, :quantity, )'), {
                 "order_date_time": order_date_time,
-                "product_id": product_id,
-                "quantity": order_quantity,
+                "product_name": product_name,
+                "order_quantity": order_quantity,
+            })
+            total = order_quantity * product["unit_price"]
+            order_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
+            conn.execute(text('INSERT INTO sales (order_id, sale_date_time, product_name, order_quantity, price, total) VALUES (:order_id, :sale_date_time, :product_name, :order_quantity, :price, :total)'), {
+                "order_id": order_id,
+                "order_date_time": order_date_time,
+                "product_name": product_name,
+                "order_quantity": order_quantity,
                 "price": product["unit_price"],
                 "total": total
             })
