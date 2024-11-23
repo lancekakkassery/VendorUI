@@ -17,13 +17,23 @@ import { Bar, Doughnut, Line } from "react-chartjs-2";
 function App() {
   const [count, setCount] = useState(0)
 
-  const fetchAPI = async () =>{
-    const response = await axios.get('http://127.0.0.1:8080/api/users');
-    console.log(response.data.users)
+  const fetchSalesData = async () =>{
+    const response = await axios.get('http://127.0.0.1:8080/sales');
+    console.log(response.data)
+  }
+  const fetchProductsData = async () =>{
+    const response = await axios.get('http://127.0.0.1:8080/products');
+    console.log(response.data)
+  }
+  const fetchOrderHistory = async () =>{
+    const response = await axios.get('http://127.0.0.1:8080/order_history');
+    console.log(response.data)
   }
 
+
   useEffect(() =>{
-    fetchAPI()
+    fetchSalesData()
+    fetchProductsData()
   },[])
 
   return (
