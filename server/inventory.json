@@ -1,0 +1,6 @@
+[
+    {"product_name":"bun","quantity":1000,"unit_price":0.50},
+    {"product_name":"patty","quantity":1000,"unit_price":0.50},
+    {"product_name":"lettuce","quantity":1000,"unit_price":0.50},
+    {"product_name":"tomato","quantity":1000,"unit_price":0.50}
+]

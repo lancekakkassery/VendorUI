@@ -33,23 +33,24 @@ CREATE TABLE IF NOT EXISTS sales (
 create_inventory = text('''
 CREATE TABLE IF NOT EXISTS inventory (
     product_name TEXT PRIMARY KEY,
-    quantity INTEGER
+    quantity INTEGER,
+    unit_price REAL
 ) 
 ''')
-
 
 with engine.connect() as conn:
     conn.execute(create_orders)
     conn.execute(create_sales)
     conn.execute(create_inventory)
+
 # Load the JSON file into a pandas DataFrame
 df = pd.read_json('inventory.json') 
-df.to_sql('invent_data', engine, if_exists='replace', index=False)
+df.to_sql('inventory', engine, if_exists='replace', index=False)
 
 @app.route('/products', methods=['GET']) 
 def get_products(): 
     conn = engine.connect()
-    query = text('SELECT * FROM invent_data')
+    query = text('SELECT * FROM inventory')
     result = conn.execute(query)
     products = [dict(row._mapping) for row in result]
     conn.close()
@@ -62,29 +63,32 @@ def take_order():
     order_quantity = order_data["order_quantity"] #placeholders
     order_date_time = order_data["order_date_time"]
     with engine.connect() as conn:
-        result = conn.execute(text('SELECT quantity FROM inventory WHERE product_name = :product_name'), {"product_name": product_name})
+        result = conn.execute(text('SELECT quantity, unit_price FROM inventory WHERE product_name = :product_name'), {"product_name": product_name})
         product = result.fetchone()
-        if product and product["quantity"] >= order_quantity:
-            conn.execute(text('UPDATE inventory SET quantity = quantity - :order_quantity WHERE product_name = :product_name'), {"order_quantity": order_quantity, "product_name": product_name}) 
-            conn.execute(text('INSERT INTO orders (order_date_time, product_name, quantity) VALUES (:order_date_time, :product_name, :quantity, )'), {
-                "order_date_time": order_date_time,
-                "product_name": product_name,
-                "order_quantity": order_quantity,
-            })
-            total = order_quantity * product["unit_price"]
-            order_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
-            conn.execute(text('INSERT INTO sales (order_id, sale_date_time, product_name, order_quantity, price, total) VALUES (:order_id, :sale_date_time, :product_name, :order_quantity, :price, :total)'), {
-                "order_id": order_id,
-                "order_date_time": order_date_time,
-                "product_name": product_name,
-                "order_quantity": order_quantity,
-                "price": product["unit_price"],
-                "total": total
-            })
-            return jsonify({"message": "Order processed"})
+        if product:
+            product = dict(product._mapping)
+            if product["quantity"] >= order_quantity:
+                conn.execute(text('UPDATE inventory SET quantity = quantity - :order_quantity WHERE product_name = :product_name'), {"order_quantity": order_quantity, "product_name": product_name}) 
+                conn.execute(text('INSERT INTO orders (order_date_time, product_id, order_quantity) VALUES (:order_date_time, :product_id, :order_quantity)'), {
+                    "order_date_time": order_date_time,
+                    "product_id": product_name,
+                    "order_quantity": order_quantity,
+                })
+                total = order_quantity * product["unit_price"]
+                order_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
+                conn.execute(text('INSERT INTO sales (order_id, sale_date_time, product_name, order_quantity, price, total) VALUES (:order_id, :sale_date_time, :product_name, :order_quantity, :price, :total)'), {
+                    "order_id": order_id,
+                    "order_date_time": order_date_time,
+                    "product_name": product_name,
+                    "order_quantity": order_quantity,
+                    "price": product["unit_price"],
+                    "total": total
+                })
+                return jsonify({"message": "Order processed"})
+            else:
+                return jsonify({"error": "Insufficient inventory"}), 400 #400 status code for hwne server cannot or will not process a request due to client error
         else:
-            return jsonify({"error": "Insufficient inventory"}), 400 #400 status code for hwne server cannot or will not process a request due to client error
-        
+            return jsonify({"error": "Does not exist"}), 400    
 @app.route('/preliminary')
 def read_file():
     # Open the JSON file
