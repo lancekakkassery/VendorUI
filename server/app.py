@@ -76,12 +76,12 @@ def take_order():
                 })
                 total = order_quantity * product["unit_price"]
                 order_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
-                conn.execute(text('INSERT INTO sales (order_id, sale_date_time, product_name, order_quantity, price, total) VALUES (:order_id, :sale_date_time, :product_name, :order_quantity, :price, :total)'), {
+                conn.execute(text('INSERT INTO sales (order_id, sale_date_time, product_id, quantity, unit_price, total) VALUES (:order_id, :sale_date_time, :product_id, :quantity, :unit_price, :total)'), {
                     "order_id": order_id,
-                    "order_date_time": order_date_time,
-                    "product_name": product_name,
-                    "order_quantity": order_quantity,
-                    "price": product["unit_price"],
+                    "sale_date_time": order_date_time,
+                    "product_id": product_name,
+                    "quantity": order_quantity,
+                    "unit_price": product["unit_price"],
                     "total": total
                 })
                 return jsonify({"message": "Order processed"})
