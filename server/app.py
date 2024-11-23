@@ -55,51 +55,74 @@ def get_products():
     products = [dict(row._mapping) for row in result]
     conn.close()
     return jsonify(products)
-
+def print_sales_data(): 
+    with engine.connect() as conn: 
+        result = conn.execute(text('SELECT * FROM sales')) 
+        sales = [dict(row._mapping) for row in result] 
+        print("Sales Data:", sales)
 @app.route('/orders', methods=['POST'])
 def take_order():
     order_data = request.json
-    product_name = order_data["product_name"] #need to decide how order information will be communicated
-    order_quantity = order_data["order_quantity"] #placeholders
+    product_name = order_data["product_name"]
+    order_quantity = order_data["order_quantity"]
     order_date_time = order_data["order_date_time"]
+    
     with engine.connect() as conn:
-        result = conn.execute(text('SELECT quantity, unit_price FROM inventory WHERE product_name = :product_name'), {"product_name": product_name})
-        product = result.fetchone()
-        if product:
-            product = dict(product._mapping)
-            if product["quantity"] >= order_quantity:
-                conn.execute(text('UPDATE inventory SET quantity = quantity - :order_quantity WHERE product_name = :product_name'), {"order_quantity": order_quantity, "product_name": product_name}) 
-                conn.execute(text('INSERT INTO orders (order_date_time, product_id, order_quantity) VALUES (:order_date_time, :product_id, :order_quantity)'), {
-                    "order_date_time": order_date_time,
-                    "product_id": product_name,
-                    "order_quantity": order_quantity,
-                })
-                total = order_quantity * product["unit_price"]
-                order_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
-                conn.execute(text('INSERT INTO sales (order_id, sale_date_time, product_id, quantity, unit_price, total) VALUES (:order_id, :sale_date_time, :product_id, :quantity, :unit_price, :total)'), {
-                    "order_id": order_id,
-                    "sale_date_time": order_date_time,
-                    "product_id": product_name,
-                    "quantity": order_quantity,
-                    "unit_price": product["unit_price"],
-                    "total": total
-                })
-                return jsonify({"message": "Order processed"})
+        # Start a transaction explicitly
+        with conn.begin():
+            # Fetch the product details from the inventory
+            result = conn.execute(text('SELECT quantity, unit_price FROM inventory WHERE product_name = :product_name'), {"product_name": product_name})
+            product = result.fetchone()
+            if product:
+                product = dict(product._mapping)
+                # Check if sufficient inventory exists
+                if product["quantity"] >= order_quantity:
+                    # Update the inventory
+                    conn.execute(text('UPDATE inventory SET quantity = quantity - :order_quantity WHERE product_name = :product_name'),
+                                 {"order_quantity": order_quantity, "product_name": product_name})
+                    # Insert new order
+                    conn.execute(text('INSERT INTO orders (order_date_time, product_id, order_quantity) VALUES (:order_date_time, :product_id, :order_quantity)'),
+                                 {
+                                     "order_date_time": order_date_time,
+                                     "product_id": product_name,
+                                     "order_quantity": order_quantity,
+                                 })
+                    # Get the last inserted order ID
+                    order_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
+                    print(f"Order ID: {order_id}")  # Debugging: Print the order ID to confirm it's being inserted
+
+                    if order_id:
+                        total = order_quantity * product["unit_price"]
+                        conn.execute(text('''
+                            INSERT INTO sales (order_id, sale_date_time, product_id, quantity, unit_price, total)
+                            VALUES (:order_id, :sale_date_time, :product_id, :quantity, :unit_price, :total)
+                        '''),
+                                     {
+                                         "order_id": order_id,
+                                         "sale_date_time": order_date_time,
+                                         "product_id": product_name,
+                                         "quantity": order_quantity,
+                                         "unit_price": product["unit_price"],
+                                         "total": total
+                                     })
+
+
+                        return jsonify({"message": "Order processed"})
+                    else:
+                        return jsonify({"error": "Failed to retrieve order ID"}), 500
+                else:
+                    return jsonify({"error": "Insufficient inventory"}), 400
             else:
-                return jsonify({"error": "Insufficient inventory"}), 400 #400 status code for hwne server cannot or will not process a request due to client error
-        else:
-            return jsonify({"error": "Does not exist"}), 400    
-@app.route('/preliminary')
-def read_file():
-    # Open the JSON file
-    with open('retail.json', 'r') as file:
-        # Load data as pandas dataframe
-        df = pd.read_json(file)
-        df['order_date_time'] = df['order_date_time'].astype(str)
-    data = df.to_dict(orient='records')
-    formatted_json = json.dumps(data, indent=2)
-    return Response(formatted_json, mimetype='application/json')
-# Access the data
+                return jsonify({"error": "Product does not exist"}), 400    
+
+@app.route('/sales', methods=['GET'])
+def sales_data():
+    with engine.connect() as conn:
+        query = text('SELECT * FROM sales')
+        result = conn.execute(query)
+        sales = [dict(row._mapping) for row in result]
+    return jsonify(sales)
+
 
 
 #small 
