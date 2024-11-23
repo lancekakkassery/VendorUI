@@ -123,6 +123,22 @@ def sales_data():
         sales = [dict(row._mapping) for row in result]
     return jsonify(sales)
 
+@app.route('/order_history', methods=['GET'])
+def order_history():
+    # Create a connection to the database
+    with engine.connect() as conn:
+        # You can now execute queries
+        query = text("SELECT * FROM orders")  # Adjust with your actual table name
+        result = conn.execute(query)
+        # Fetch all rows from the result
+        rows = result.fetchall()
+        # Convert the result into a list of dictionaries
+        order_history = []
+        for row in rows:
+            # For each row, create a dictionary of the columns and their values
+            order_history.append({column: value for column, value in row.items()})
+    # Return the data as a JSON response
+    return jsonify(order_history)
 
 
 #small 
