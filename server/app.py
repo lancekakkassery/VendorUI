@@ -55,18 +55,13 @@ def get_products():
     products = [dict(row._mapping) for row in result]
     conn.close()
     return jsonify(products)
-def print_sales_data(): 
-    with engine.connect() as conn: 
-        result = conn.execute(text('SELECT * FROM sales')) 
-        sales = [dict(row._mapping) for row in result] 
-        print("Sales Data:", sales)
+
 @app.route('/orders', methods=['POST'])
 def take_order():
     order_data = request.json
     product_name = order_data["product_name"]
     order_quantity = order_data["order_quantity"]
     order_date_time = order_data["order_date_time"]
-    
     with engine.connect() as conn:
         # Start a transaction explicitly
         with conn.begin():
@@ -105,8 +100,7 @@ def take_order():
                                          "unit_price": product["unit_price"],
                                          "total": total
                                      })
-
-
+                        
                         return jsonify({"message": "Order processed"})
                     else:
                         return jsonify({"error": "Failed to retrieve order ID"}), 500
@@ -136,7 +130,7 @@ def order_history():
         order_history = []
         for row in rows:
             # For each row, create a dictionary of the columns and their values
-            order_history.append({column: value for column, value in row.items()})
+            order_history.append(dict(row._mapping))
     # Return the data as a JSON response
     return jsonify(order_history)
 
