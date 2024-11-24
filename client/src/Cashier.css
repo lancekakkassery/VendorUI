@@ -1,0 +1,118 @@
+.cashier-container {
+    padding: 50px;
+    font-family: Arial, sans-serif;
+    background-color: #f8f8f8;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 300px;
+    height: 800px;
+    margin: 0 auto ;
+    text-align: center;
+  }
+  
+  
+  .cashier-container h2 {
+    margin-bottom: 10px;
+    color: #333;
+  
+  
+  
+  
+  }
+  
+  
+  .toppings-section {
+    text-align:left;
+    margin-left: 0;
+  
+  
+  
+  
+  
+  
+  }
+  
+  
+  .topping-item {
+    margin: 10px 0;
+    font-size: 16px;
+    color: #333;
+  
+  
+  
+  
+  }
+  
+  
+  .submit-btn {
+    padding: 10px 20px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    position: absolute;
+    bottom: 60px;
+    left:60px;
+  }
+  
+  
+  .submit-btn:hover {
+    background-color: #45a049;
+  
+  
+  }
+  
+  
+  
+  
+  .cashier-container h3 {
+    color: #333;
+    text-align: left;
+    margin-left: 0;
+    margin-top: 30;
+    font-size: 24px;
+  }
+  
+  
+  .cashier-container h4 {
+    color: #333;
+    text-align:left;
+    margin-left:10;
+    margin-top:20;
+  }
+  
+  
+  .cashier-container h5 {
+    color: #333;
+    text-align:left;
+    margin-left:10;
+    margin-top:20;
+    font-size: 24px;
+  
+  
+  
+  
+  }
+  
+  
+  .size-section {
+      text-align:left;
+      margin-left: 0;
+   
+   
+   
+    }
+  
+  
+    .size-item {
+      text-align:left;
+      margin: 10px 0;
+      margin-bottom: 10px;
+      font-size: 16px;
+      color: #333;
+   
+   
+    }  
