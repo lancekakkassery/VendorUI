@@ -240,27 +240,48 @@ def order_history():
     # Return the data as a JSON response
     return jsonify(order_history)
 
-@app.route('/profits', methods = ['GET'])
+@app.route('/profits', methods=['GET'])
 def profit():
     with engine.connect() as conn:
-        sales_query = text('SELECT SUM(total) as total_profit FROM sales')
-        expenses_query = text('SELECT SUM(total) as total_expenses FROM expenses')
+        # Query to get sales by date
+        sales_query = text('''
+            SELECT DATE(sale_date_time) as sale_date, SUM(total) as total_sales
+            FROM sales
+            GROUP BY sale_date
+            ORDER BY sale_date
+        ''')
 
-        sales_result = conn.execute(sales_query)
-        expenses_result = conn.execute(expenses_query)
+        # Query to get expenses by date
+        expenses_query = text('''
+            SELECT DATE(shipment_date_time) as expense_date, SUM(total) as total_expenses
+            FROM expenses
+            GROUP BY expense_date
+            ORDER BY expense_date
+        ''')
 
-        total_sales = sales_result.fetchone()[0]
-        total_expenses = expenses_result.fetchone()[0]
-        print(total_sales)
-        print(total_expenses)
+        # Execute the queries and get results as mappings (dictionaries)
+        sales_result = conn.execute(sales_query).mappings()
+        expenses_result = conn.execute(expenses_query).mappings()
 
-        if total_sales is None:
-            total_sales = 0
-        if total_expenses is None:
-            total_expenses = 0
-        total_profit = total_sales - total_expenses
-        return jsonify({"total_profit": total_profit})
+        # Create dictionaries to store sales and expenses by date
+        sales_data = {row['sale_date']: row['total_sales'] for row in sales_result if row['sale_date'] is not None}
+        expenses_data = {row['expense_date']: row['total_expenses'] for row in expenses_result if row['expense_date'] is not None}
 
+        # Create lists for the dates and profits
+        dates = sorted(set(sales_data.keys()).union(expenses_data.keys()))
+
+        profits = []
+
+        # Calculate profits for each date
+        for date in dates:
+            total_sales = sales_data.get(date, 0)
+            total_expenses = expenses_data.get(date, 0)
+            total_profit = total_sales - total_expenses
+            profits.append({'date': date, 'profit': total_profit})
+
+        # Return the data to be used for plotting the line graph
+        return jsonify(profits)
+    
 @app.route('/clear_order_history', methods=['POST'])
 def clear_order_history():
     # Create a connection to the database
