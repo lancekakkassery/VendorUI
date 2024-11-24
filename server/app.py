@@ -243,10 +243,24 @@ def order_history():
 @app.route('/profits', methods = ['GET'])
 def profit():
     with engine.connect() as conn:
-        query = text('SELECT SUM(total) as total_profit FROM sales')
-        result = conn.execute(query)
-        profit = result.fetchone()
-        return jsonify({"total_profit": profit[0]})
+        sales_query = text('SELECT SUM(total) as total_profit FROM sales')
+        expenses_query = text('SELECT SUM(total) as total_expenses FROM expenses')
+
+        sales_result = conn.execute(sales_query)
+        expenses_result = conn.execute(expenses_query)
+
+        total_sales = sales_result.fetchone()[0]
+        total_expenses = expenses_result.fetchone()[0]
+        print(total_sales)
+        print(total_expenses)
+
+        if total_sales is None:
+            total_sales = 0
+        if total_expenses is None:
+            total_expenses = 0
+        total_profit = total_sales - total_expenses
+        return jsonify({"total_profit": total_profit})
+
 @app.route('/clear_order_history', methods=['POST'])
 def clear_order_history():
     # Create a connection to the database
