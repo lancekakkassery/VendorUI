@@ -16,14 +16,13 @@ CREATE TABLE IF NOT EXISTS orders (
     order_quantity INTEGER
 ) 
 ''')
-
 create_sales = text('''
 CREATE TABLE IF NOT EXISTS sales (
     sale_id INTEGER PRIMARY KEY AUTOINCREMENT, 
     order_id  INTEGER,
     sale_date_time DATETIME, 
     product_id TEXT, 
-    quantity INTEGER, 
+    quantities INTEGER, 
     unit_price REAL,
     total REAL,
     FOREIGN KEY (order_id) REFERENCES orders(order_id)
@@ -113,30 +112,7 @@ def take_order():
                             "quantity_needed": quantity_needed, 
                             "product_name": topping
                         })
-                    conn.execute(text('INSERT INTO orders (order_date_time, product_id, order_quantity) VALUES (:order_date_time, :product_id, :order_quantity)'), { 
-                        "order_date_time": order_date_time, 
-                        "product_id": f"{len(orders_data)} burger order", 
-                        "order_quantity": overall_order_quantity
-                    })
-                    order_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
-
-                    total = total_price_per_burger * order_quantity
-                    conn.execute(text('''
-                        INSERT INTO sales (order_id, sale_date_time, product_id, quantity, unit_price, total) 
-                        VALUES (:order_id, :sale_date_time, :product_id, :quantity, :unit_price, :total)
-                    '''), {
-                        "order_id": order_id,
-                        "sale_date_time": order_date_time,
-                        "product_id": f"burger with {', '.join(toppings)}",
-                        "quantity": order_quantity,
-                        "unit_price": total_price_per_burger,
-                        "total": total
-                    })
-                    #    orders_processed.append({
-                    #        "order_id": order_id,
-                     #       "total_price_per_burger": total,
-                    #        "toppings": toppings
-                     #   })
+                    
                     components_list = []
                     unit_prices = []
                     quantities = []
@@ -144,9 +120,15 @@ def take_order():
                         components_list.append(f'burger with {', '.join(order["toppings"])}')
                         unit_prices.append(f"{order["total_price_per_burger"]:.2f}")
                         quantities.append(str(order["order_quantity"]))
+                    conn.execute(text('INSERT INTO orders (order_date_time, product_id, order_quantity) VALUES (:order_date_time, :product_id, :order_quantity)'), { 
+                        "order_date_time": order_date_time, 
+                        "product_id": f"{len(orders_data)} burger order", 
+                        "order_quantity": overall_order_quantity
+                    })
+                    order_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
                     conn.execute(text(''' 
-                        INSERT INTO sales (order_id, sale_date_time, product_id, quantity, unit_price, total) 
-                        VALUES (:order_id, :sale_date_time, :product_id, :quantity, :unit_price, :total) 
+                        INSERT INTO sales (order_id, sale_date_time, product_id, quantities, unit_price, total) 
+                        VALUES (:order_id, :sale_date_time, :product_id, :quantities, :unit_price, :total) 
                     '''), { 
                             "order_id": order_id, 
                             "sale_date_time": order_date_time, 
@@ -188,7 +170,13 @@ def order_history():
     # Return the data as a JSON response
     return jsonify(order_history)
 
-
+@app.route('/profits', methods = ['GET'])
+def profit():
+    with engine.connect() as conn:
+        query = text('SELECT SUM(total) as total_profit FROM sales')
+        result = conn.execute(query)
+        profit = result.fetchone()
+        return jsonify({"total_profit": profit[0]})
 #small 
 
 if __name__ == '__main__':
