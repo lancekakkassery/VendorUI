@@ -58,57 +58,106 @@ def get_products():
 
 @app.route('/orders', methods=['POST'])
 def take_order():
-    order_data = request.json
-    product_name = order_data["product_name"]
-    order_quantity = order_data["order_quantity"]
-    order_date_time = order_data["order_date_time"]
+    orders_data = request.json
     with engine.connect() as conn:
-        # Start a transaction explicitly
-        with conn.begin():
-            # Fetch the product details from the inventory
-            result = conn.execute(text('SELECT quantity, unit_price FROM inventory WHERE product_name = :product_name'), {"product_name": product_name})
-            product = result.fetchone()
-            if product:
-                product = dict(product._mapping)
-                # Check if sufficient inventory exists
-                if product["quantity"] >= order_quantity:
-                    # Update the inventory
-                    conn.execute(text('UPDATE inventory SET quantity = quantity - :order_quantity WHERE product_name = :product_name'),
-                                 {"order_quantity": order_quantity, "product_name": product_name})
-                    # Insert new order
-                    conn.execute(text('INSERT INTO orders (order_date_time, product_id, order_quantity) VALUES (:order_date_time, :product_id, :order_quantity)'),
-                                 {
-                                     "order_date_time": order_date_time,
-                                     "product_id": product_name,
-                                     "order_quantity": order_quantity,
-                                 })
-                    # Get the last inserted order ID
-                    order_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
-                    print(f"Order ID: {order_id}")  # Debugging: Print the order ID to confirm it's being inserted
+        order_sufficient_inventory = True
+        orders_processed = []
+        order_price_total = 0.0
 
-                    if order_id:
-                        total = order_quantity * product["unit_price"]
-                        conn.execute(text('''
-                            INSERT INTO sales (order_id, sale_date_time, product_id, quantity, unit_price, total)
-                            VALUES (:order_id, :sale_date_time, :product_id, :quantity, :unit_price, :total)
-                        '''),
-                                     {
-                                         "order_id": order_id,
-                                         "sale_date_time": order_date_time,
-                                         "product_id": product_name,
-                                         "quantity": order_quantity,
-                                         "unit_price": product["unit_price"],
-                                         "total": total
-                                     })
-                        
-                        return jsonify({"message": "Order processed"})
+        all_toppings = {}
+        overall_order_quantity = 0
+        for order_data in orders_data:
+            toppings = order_data["toppings"] + ["bun", "patty"]
+            order_quantity = order_data["order_quantity"]
+            order_date_time = order_data["order_date_time"]
+
+            with conn.begin():
+                total_price_per_burger = 0.0 
+                sufficient_inventory = True
+                
+                for topping in toppings: 
+                    if topping not in all_toppings:
+                        all_toppings[topping] = 0
+                    all_toppings[topping] += order_quantity
+
+                    result = conn.execute(text('SELECT quantity, unit_price FROM inventory WHERE product_name = :product_name'), {"product_name": topping}) 
+                    product = result.fetchone() 
+                    product = dict(product._mapping)
+
+                    if product:
+                        if product["quantity"] < all_toppings[topping]: 
+                            sufficient_inventory = False
+                            break
+                        total_price_per_burger += product["unit_price"]
                     else:
-                        return jsonify({"error": "Failed to retrieve order ID"}), 500
-                else:
-                    return jsonify({"error": "Insufficient inventory"}), 400
-            else:
-                return jsonify({"error": "Product does not exist"}), 400    
+                        sufficient_inventory = False
+                        break
 
+                if not sufficient_inventory:
+                    order_sufficient_inventory = False
+                    break
+
+                if sufficient_inventory:
+                    order_price_total += total_price_per_burger * order_quantity
+                    overall_order_quantity += order_quantity
+                    orders_processed.append({ 
+                        "toppings": toppings, 
+                        "order_quantity": order_quantity, 
+                        "order_date_time": order_date_time, 
+                        "total_price_per_burger": total_price_per_burger
+                    })
+
+                if order_sufficient_inventory:
+                    for topping, quantity_needed in all_toppings.items():
+                        conn.execute(text('UPDATE inventory SET quantity = quantity - :quantity_needed WHERE product_name = :product_name'), {
+                            "quantity_needed": quantity_needed, 
+                            "product_name": topping
+                        })
+                    conn.execute(text('INSERT INTO orders (order_date_time, product_id, order_quantity) VALUES (:order_date_time, :product_id, :order_quantity)'), { 
+                        "order_date_time": order_date_time, 
+                        "product_id": f"{len(orders_data)} burger order", 
+                        "order_quantity": overall_order_quantity
+                    })
+                    order_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
+
+                    total = total_price_per_burger * order_quantity
+                    conn.execute(text('''
+                        INSERT INTO sales (order_id, sale_date_time, product_id, quantity, unit_price, total) 
+                        VALUES (:order_id, :sale_date_time, :product_id, :quantity, :unit_price, :total)
+                    '''), {
+                        "order_id": order_id,
+                        "sale_date_time": order_date_time,
+                        "product_id": f"burger with {', '.join(toppings)}",
+                        "quantity": order_quantity,
+                        "unit_price": total_price_per_burger,
+                        "total": total
+                    })
+                    #    orders_processed.append({
+                    #        "order_id": order_id,
+                     #       "total_price_per_burger": total,
+                    #        "toppings": toppings
+                     #   })
+                    components_list = []
+                    unit_prices = []
+                    for order in orders_processed:
+                        components_list.append(f'burger with {', '.join(order["toppings"])}')
+                        unit_prices.append(f"{order["total_price_per_burger"]:.2f}")
+                    conn.execute(text(''' 
+                        INSERT INTO sales (order_id, sale_date_time, product_id, quantity, unit_price, total) 
+                        VALUES (:order_id, :sale_date_time, :product_id, :quantity, :unit_price, :total) 
+                    '''), { 
+                            "order_id": order_id, 
+                            "sale_date_time": order_date_time, 
+                            "product_id": f"{' and '.join(components_list)}", 
+                            "quantity": overall_order_quantity, 
+                            "unit_price": ', '.join(unit_prices),
+                            "total": order_price_total
+                    })
+        if order_sufficient_inventory:
+            return jsonify({"message": "Order confirmed", "orders": orders_processed, "total price": order_price_total})
+        else:
+            return jsonify({"error": "Insufficient inventory"}), 400
+            
 @app.route('/sales', methods=['GET'])
 def sales_data():
     with engine.connect() as conn:
