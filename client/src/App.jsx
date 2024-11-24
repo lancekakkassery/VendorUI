@@ -124,7 +124,7 @@ function App() {
 {/* sales */} 
       <div className="card"
       style={{
-        position: 'absolute',
+        position:'absolute',
         top:'10%',
         left: '10%'
       }}>
@@ -133,32 +133,10 @@ function App() {
         <div className = 'sales'>
           <Line
             data = {{
-              labels:['12','1','2','3','4','5','6','7','8','9','10'],
+              labels:['12','1','2','3','4','5','6','7','8','9','10',],
               datasets:[{
                 label:'$',
                 data:[702, 1194, 1494, 513, 1135, 1297, 1387, 859, 1490, 826, 970],
-                borderColor: 'green',
-                fill: true,
-                backgroundColor: 'rgba(0, 128, 0, 0.2)'
-              }]
-
-            }}
-            options={{
-              plugins:{
-                title:{
-                  display:true,
-                  text:'Daily Revenue'
-                }
-              }
-            }}
-          />
-          {/*Number of Orders */}
-          <Line
-            data = {{
-              labels:['January', 'Febuary','March','April','May','June','July','August','September','October','November','December'],
-              datasets:[{
-                label:'$',
-                data:[998, 1133, 955, 931, 1265, 756, 554, 730, 1170, 1490, 1418,1300],
                 borderColor: 'green',
                 fill: true,
                 backgroundColor: 'rgba(0, 128, 0, 0.2)'
@@ -171,13 +149,47 @@ function App() {
               plugins:{
                 title:{
                   display:true,
-                  text:'Monthly Revenue'
+                  text:'Daily Revenue'
                 }
               }
             }}
           />
+          {/*Number of Orders */}
         </div>
       </div>
+
+      <div className='card'
+      style={{
+        position:'absolute',
+        left:'10%',
+        top:'55%'
+      }}>
+        <div className='sales'>
+          <Line
+            data = {{
+              labels:['12','1','2','3','4','5','6','7','8','9','10'],
+              datasets:[{
+                label:'Quantity',
+                data:[998, 1133, 955, 931, 1265, 756, 554, 730, 1170, 1490, 1418,1300],
+                borderColor: 'rgba(137, 196, 244)',
+                fill: true,
+                backgroundColor: 'rgba(137, 196, 244,.2)'
+              }]
+
+            }}
+            options={{
+              maintainAspectRatio:false,
+              responsive:true,
+              plugins:{
+                title:{
+                  display:true,
+                  text:'Daily Orders'
+                }
+              }
+            }}
+          />
+          </div>
+        </div>
     </>
   )
 }
