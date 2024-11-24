@@ -139,9 +139,11 @@ def take_order():
                      #   })
                     components_list = []
                     unit_prices = []
+                    quantities = []
                     for order in orders_processed:
                         components_list.append(f'burger with {', '.join(order["toppings"])}')
                         unit_prices.append(f"{order["total_price_per_burger"]:.2f}")
+                        quantities.append(str(order["order_quantity"]))
                     conn.execute(text(''' 
                         INSERT INTO sales (order_id, sale_date_time, product_id, quantity, unit_price, total) 
                         VALUES (:order_id, :sale_date_time, :product_id, :quantity, :unit_price, :total) 
@@ -149,7 +151,7 @@ def take_order():
                             "order_id": order_id, 
                             "sale_date_time": order_date_time, 
                             "product_id": f"{' and '.join(components_list)}", 
-                            "quantity": overall_order_quantity, 
+                            "quantities": f"{', '.join(quantities)}",
                             "unit_price": ', '.join(unit_prices),
                             "total": order_price_total
                     })
