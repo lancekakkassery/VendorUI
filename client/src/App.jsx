@@ -8,6 +8,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import { Chart as ChartJS, defaults } from "chart.js/auto";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
+import Cashier from "./Cashier.jsx"
 
 {/*
 <button onClick={() => setCount((count) => count + 1)}>
@@ -15,7 +16,7 @@ import { Bar, Doughnut, Line } from "react-chartjs-2";
 </button>
 */} 
 function App() {
-  const [count, setCount] = useState(0)
+  const [currentScreen, setCurrentScreen] = useState('home')
 
   const [products, setProducts] = useState([])
   const [sales, setSales] = useState([])
@@ -27,7 +28,7 @@ function App() {
     setSales(response.data)
   }
   const fetchProductsData = async () =>{
-    const response = await axios.get('http://127.0.0.1:8080/products');
+    const response = await axios.get('http://127.0.0.1:8080/inventory');
     console.log(response.data)
     setProducts(response.data)
   }
@@ -60,9 +61,20 @@ function App() {
   hourlySales[hour].total += sale.total;
 });
   console.log(hourlySales);
-
+  console.log(currentScreen)
   return (
     <>
+    {currentScreen === 'home' && (
+      <div>
+      <button onClick={() => setCurrentScreen('Cashier')}>Go to Cashier</button>
+      </div>
+    )}
+    {currentScreen === "Cashier" && (
+      <div>
+        <Cashier/>
+        <button onClick = {() => setCurrentScreen('home')}>Go Back to Home</button>
+      </div>
+    )}
     {/* item stock*/} 
       <div className="card" 
       style={{
@@ -124,7 +136,7 @@ function App() {
 {/* sales */} 
       <div className="card"
       style={{
-        position: 'absolute',
+        position:'absolute',
         top:'10%',
         left: '10%'
       }}>
@@ -133,32 +145,10 @@ function App() {
         <div className = 'sales'>
           <Line
             data = {{
-              labels:['12','1','2','3','4','5','6','7','8','9','10'],
+              labels:['12','1','2','3','4','5','6','7','8','9','10',],
               datasets:[{
                 label:'$',
                 data:[702, 1194, 1494, 513, 1135, 1297, 1387, 859, 1490, 826, 970],
-                borderColor: 'green',
-                fill: true,
-                backgroundColor: 'rgba(0, 128, 0, 0.2)'
-              }]
-
-            }}
-            options={{
-              plugins:{
-                title:{
-                  display:true,
-                  text:'Daily Revenue'
-                }
-              }
-            }}
-          />
-          {/*Number of Orders */}
-          <Line
-            data = {{
-              labels:['January', 'Febuary','March','April','May','June','July','August','September','October','November','December'],
-              datasets:[{
-                label:'$',
-                data:[998, 1133, 955, 931, 1265, 756, 554, 730, 1170, 1490, 1418,1300],
                 borderColor: 'green',
                 fill: true,
                 backgroundColor: 'rgba(0, 128, 0, 0.2)'
@@ -171,13 +161,47 @@ function App() {
               plugins:{
                 title:{
                   display:true,
-                  text:'Monthly Revenue'
+                  text:'Daily Revenue'
                 }
               }
             }}
           />
+          {/*Number of Orders */}
         </div>
       </div>
+
+      <div className='card'
+      style={{
+        position:'absolute',
+        left:'10%',
+        top:'55%'
+      }}>
+        <div className='sales'>
+          <Line
+            data = {{
+              labels:['12','1','2','3','4','5','6','7','8','9','10'],
+              datasets:[{
+                label:'Quantity',
+                data:[998, 1133, 955, 931, 1265, 756, 554, 730, 1170, 1490, 1418,1300],
+                borderColor: 'rgba(137, 196, 244)',
+                fill: true,
+                backgroundColor: 'rgba(137, 196, 244,.2)'
+              }]
+
+            }}
+            options={{
+              maintainAspectRatio:false,
+              responsive:true,
+              plugins:{
+                title:{
+                  display:true,
+                  text:'Daily Orders'
+                }
+              }
+            }}
+          />
+          </div>
+        </div>
     </>
   )
 }
