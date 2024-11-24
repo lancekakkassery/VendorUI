@@ -89,6 +89,13 @@ with engine.connect() as conn:
     else:
         print(f"expenses is empty")
 
+with engine.connect() as conn:
+    conn.execute(create_orders)
+    conn.execute(create_sales)
+    conn.execute(create_inventory)
+    conn.execute(create_shipments)
+    conn.execute(create_expenses)
+
 # Load the JSON file into a pandas DataFrame
 df = pd.read_json('inventory.json') 
 df.to_sql('inventory', engine, if_exists='replace', index=False)
