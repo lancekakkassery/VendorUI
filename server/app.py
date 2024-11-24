@@ -66,6 +66,20 @@ with engine.connect() as conn:
     conn.execute(create_inventory)
     conn.execute(create_shipments)
     conn.execute(create_expenses)
+def check_if_table_has_data(table_name):
+    with engine.connect() as conn:
+        result = conn.execute(text(f"SELECT 1 FROM {table_name} LIMIT 1"))
+        row = result.fetchone()
+        if row:
+            print(f"Table {table_name} has data.")
+        else:
+            print(f"Table {table_name} is empty.")
+        
+check_if_table_has_data('shipments') 
+check_if_table_has_data('orders') 
+check_if_table_has_data('sales')
+# Check if the desired table has data, e.g., 'inventory'
+check_if_table_has_data('inventory')
 
 with engine.connect() as conn:
     result = conn.execute(text(f"SELECT 1 FROM expenses LIMIT 1"))
@@ -225,7 +239,8 @@ def profit():
         query = text('SELECT SUM(total) as total_profit FROM sales')
         result = conn.execute(query)
         profit = result.fetchone()
-        return jsonify({"total_profit": profit[0]})@app.route('/clear_order_history', methods=['POST'])
+        return jsonify({"total_profit": profit[0]})
+@app.route('/clear_order_history', methods=['POST'])
 def clear_order_history():
     # Create a connection to the database
     with engine.connect() as conn:
@@ -281,47 +296,53 @@ def restock():
     product_name = shipment_data["product_name"]
     shipment_quantity = shipment_data["shipment_quantity"]
     shipment_date_time = shipment_data["shipment_date_time"]
+    
     with engine.connect() as conn:
-        # Fetch the product details from the inventory
-        result = conn.execute(text('SELECT quantity, restock_price FROM inventory WHERE product_name = :product_name'), {"product_name": product_name})
-        product = result.fetchone()
-        if product:
-            product = dict(product._mapping)
-            # Update the inventory
-            conn.execute(text('UPDATE inventory SET quantity = quantity + :shipment_quantity WHERE product_name = :product_name'),
+        with conn.begin():
+            # Fetch the product details from the inventory
+            result = conn.execute(text('SELECT quantity, restock_price FROM inventory WHERE product_name = :product_name'), {"product_name": product_name})
+            product = result.fetchone()
+
+            if product:
+                product = dict(product._mapping)
+
+                # Update the inventory by adding the new shipment quantity
+                conn.execute(text('UPDATE inventory SET quantity = quantity + :shipment_quantity WHERE product_name = :product_name'),
                             {"shipment_quantity": shipment_quantity, "product_name": product_name})
-            # Insert new shipment
-            conn.execute(text('INSERT INTO shipments (shipment_date_time, product_id, shipment_quantity) VALUES (:shipment_date_time, :product_id, :shipment_quantity)'),
+
+                # Insert the new shipment record into the shipments table
+                conn.execute(text('INSERT INTO shipments (shipment_date_time, product_id, shipment_quantity) VALUES (:shipment_date_time, :product_id, :shipment_quantity)'),
                             {
                                 "shipment_date_time": shipment_date_time,
                                 "product_id": product_name,
                                 "shipment_quantity": shipment_quantity,
                             })
-            # Get the last inserted shipment ID
-            shipment_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
-            print(f"Shipment ID: {shipment_id}")  # Debugging: Print the order ID to confirm it's being inserted
 
-            if shipment_id:
-                total = shipment_quantity * product["restock_price"]
-                conn.execute(text('''
-                    INSERT INTO expenses (shipment_id, shipment_date_time, product_id, quantity, restock_price, total)
-                    VALUES (:shipment_id, :shipment_date_time, :product_id, :quantity, :restock_price, :total)
-                '''),
-                                {
-                                    "shipment_id": shipment_id,
-                                    "shipment_date_time": shipment_date_time,
-                                    "product_id": product_name,
-                                    "quantity": shipment_quantity,
-                                    "restock_price": product["restock_price"],
-                                    "total": total
-                                })
-                
-                return jsonify({"message": "Shipment processed"})
+                # After inserting, we use last_insert_rowid() to fetch the auto-incremented shipment_id
+                shipment_id = conn.execute(text('SELECT last_insert_rowid()')).scalar()
+
+                if shipment_id:
+                    total = shipment_quantity * product["restock_price"]
+
+                    # Insert an expense record related to the shipment
+                    conn.execute(text(''' 
+                        INSERT INTO expenses (shipment_id, shipment_date_time, product_id, quantity, restock_price, total)
+                        VALUES (:shipment_id, :shipment_date_time, :product_id, :quantity, :restock_price, :total)
+                    '''), {
+                        "shipment_id": shipment_id,
+                        "shipment_date_time": shipment_date_time,
+                        "product_id": product_name,
+                        "quantity": shipment_quantity,
+                        "restock_price": product["restock_price"],
+                        "total": total
+                    })
+                    
+                    # Return the shipment ID and success message
+                    return jsonify({"message": "Shipment processed", "shipment_id": shipment_id}), 200
+                else:
+                    return jsonify({"error": "Failed to retrieve Shipment ID"}), 500
             else:
-                return jsonify({"error": "Failed to retrieve Shipment ID"}), 500
-        else:
-            return jsonify({"error": "Product does not exist"}), 400    
-
+                return jsonify({"error": "Product does not exist"}), 400
 
 
 if __name__ == '__main__':
