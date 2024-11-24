@@ -163,7 +163,10 @@ def sales_data():
     with engine.connect() as conn:
         query = text('SELECT * FROM sales')
         result = conn.execute(query)
-        sales = [dict(row._mapping) for row in result]
+        rows = result.fetchall()
+        sales = []
+        for row in rows:
+            sales.insert(0,dict(row._mapping))
     return jsonify(sales)
 
 @app.route('/order_history', methods=['GET'])
@@ -179,7 +182,7 @@ def order_history():
         order_history = []
         for row in rows:
             # For each row, create a dictionary of the columns and their values
-            order_history.append(dict(row._mapping))
+            order_history.insert(0,dict(row._mapping))
     # Return the data as a JSON response
     return jsonify(order_history)
 
