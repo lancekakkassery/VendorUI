@@ -8,6 +8,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import { Chart as ChartJS, defaults } from "chart.js/auto";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
+import Cashier from "./Cashier.jsx"
 
 {/*
 <button onClick={() => setCount((count) => count + 1)}>
@@ -15,7 +16,7 @@ import { Bar, Doughnut, Line } from "react-chartjs-2";
 </button>
 */} 
 function App() {
-  const [count, setCount] = useState(0)
+  const [currentScreen, setCurrentScreen] = useState('home')
 
   const [products, setProducts] = useState([])
   const [sales, setSales] = useState([])
@@ -27,7 +28,7 @@ function App() {
     setSales(response.data)
   }
   const fetchProductsData = async () =>{
-    const response = await axios.get('http://127.0.0.1:8080/products');
+    const response = await axios.get('http://127.0.0.1:8080/inventory');
     console.log(response.data)
     setProducts(response.data)
   }
@@ -60,9 +61,20 @@ function App() {
   hourlySales[hour].total += sale.total;
 });
   console.log(hourlySales);
-
+  console.log(currentScreen)
   return (
     <>
+    {currentScreen === 'home' && (
+      <div>
+      <button onClick={() => setCurrentScreen('Cashier')}>Go to Cashier</button>
+      </div>
+    )}
+    {currentScreen === "Cashier" && (
+      <div>
+        <Cashier/>
+        <button onClick = {() => setCurrentScreen('home')}>Go Back to Home</button>
+      </div>
+    )}
     {/* item stock*/} 
       <div className="card" 
       style={{
