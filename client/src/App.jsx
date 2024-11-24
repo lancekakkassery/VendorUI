@@ -87,7 +87,8 @@ function App() {
       }}>
         <div style={{
           height:'18rem',
-          justifyContent:'stretch'
+          justifyContent:'stretch',
+          width:'19rem'
         }}>
           <Bar
             data = {{
