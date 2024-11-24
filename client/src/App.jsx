@@ -17,24 +17,49 @@ import { Bar, Doughnut, Line } from "react-chartjs-2";
 function App() {
   const [count, setCount] = useState(0)
 
+  const [products, setProducts] = useState([])
+  const [sales, setSales] = useState([])
+  const [orders, setOrders] = useState([])
+
   const fetchSalesData = async () =>{
     const response = await axios.get('http://127.0.0.1:8080/sales');
     console.log(response.data)
+    setSales(response.data)
   }
   const fetchProductsData = async () =>{
     const response = await axios.get('http://127.0.0.1:8080/products');
     console.log(response.data)
+    setProducts(response.data)
   }
   const fetchOrderHistory = async () =>{
     const response = await axios.get('http://127.0.0.1:8080/order_history');
     console.log(response.data)
+    setOrders(response.data)
   }
 
 
   useEffect(() =>{
     fetchSalesData()
     fetchProductsData()
+    fetchOrderHistory()
   },[])
+
+  const hourlySales = {}
+  // Loop through the sales data
+  sales.forEach((sale) => {
+  // Extract the hour from the sale_date_time
+  const hour = new Date(sale.sale_date_time).getHours();
+
+  // Ensure there is an entry for this hour
+  if (!hourlySales[hour]) {
+    hourlySales[hour] = { count: 0, total: 0 };
+  }
+
+  // Increment the count and total for the corresponding hour
+  hourlySales[hour].count += 1;
+  hourlySales[hour].total += sale.total;
+});
+  console.log(hourlySales);
 
   return (
     <>
@@ -51,11 +76,11 @@ function App() {
         }}>
           <Bar
             data = {{
-              labels:["Lettuce","Tomatoes","Buns"],
+              labels:products.map((data) => data.product_name),
               datasets:[
                 {
                   label:"Stock",
-                  data:[200,300,400]
+                  data:products.map((data) => data.quantity),
                 }
               ]
             }}
@@ -103,29 +128,52 @@ function App() {
         top:'10%',
         left: '10%'
       }}>
+        {/*Daily Sales */}
+        
         <div className = 'sales'>
           <Line
             data = {{
               labels:['12','1','2','3','4','5','6','7','8','9','10'],
               datasets:[{
-                label:'Todays Revenue',
-                data:[702, 1194, 1494, 513, 1135, 1297, 1387, 859, 1490, 826, 970]
+                label:'$',
+                data:[702, 1194, 1494, 513, 1135, 1297, 1387, 859, 1490, 826, 970],
+                borderColor: 'green',
+                fill: true,
+                backgroundColor: 'rgba(0, 128, 0, 0.2)'
               }]
 
             }}
+            options={{
+              plugins:{
+                title:{
+                  display:true,
+                  text:'Daily Revenue'
+                }
+              }
+            }}
           />
+          {/*Number of Orders */}
           <Line
             data = {{
               labels:['January', 'Febuary','March','April','May','June','July','August','September','October','November','December'],
               datasets:[{
-                label:'Monthly Revenue',
-                data:[998, 1133, 955, 931, 1265, 756, 554, 730, 1170, 1490, 1418,1300]
+                label:'$',
+                data:[998, 1133, 955, 931, 1265, 756, 554, 730, 1170, 1490, 1418,1300],
+                borderColor: 'green',
+                fill: true,
+                backgroundColor: 'rgba(0, 128, 0, 0.2)'
               }]
 
             }}
             options={{
               maintainAspectRatio:false,
-              responsive:true
+              responsive:true,
+              plugins:{
+                title:{
+                  display:true,
+                  text:'Monthly Revenue'
+                }
+              }
             }}
           />
         </div>
