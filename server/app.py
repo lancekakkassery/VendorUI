@@ -60,13 +60,6 @@ CREATE TABLE IF NOT EXISTS inventory (
     restock_price REAL
 ) 
 ''')
-with engine.connect() as conn:
-    result = conn.execute(text(f"SELECT 1 FROM expenses LIMIT 1"))
-    row = result.fetchone()
-    if row:
-        print(f"expenses has data")
-    else:
-        print(f"expenses is empty")
 
 with engine.connect() as conn:
     conn.execute(create_orders)
@@ -75,6 +68,13 @@ with engine.connect() as conn:
     conn.execute(create_shipments)
     conn.execute(create_expenses)
 
+with engine.connect() as conn:
+    result = conn.execute(text(f"SELECT 1 FROM expenses LIMIT 1"))
+    row = result.fetchone()
+    if row:
+        print(f"expenses has data")
+    else:
+        print(f"expenses is empty")
 # Load the JSON file into a pandas DataFrame
 df = pd.read_json('inventory.json') 
 df.to_sql('inventory', engine, if_exists='replace', index=False)
